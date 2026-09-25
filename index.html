@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Game MPI IPS SDLB Kelas VI</title>
+    
+    <!-- Menambahkan Icon MPI -->
+    <link rel="icon" type="image/png" href="asset/icon.png">
+    <link rel="apple-touch-icon" href="asset/icon.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-image: url('asset/bg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+            touch-action: manipulation;
+            overflow: hidden; /* Prevent scrolling for app-like feel */
+        }
+
+        /* Animations */
+        @keyframes bounce-slight {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-slight {
+            animation: bounce-slight 2s infinite;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .hide-section {
+            display: none !important;
+        }
+
+        /* Interactive Elements */
+        .btn-game {
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+        }
+        .btn-game:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        }
+        
+        .btn-game:disabled {
+            transform: none !important;
+            box-shadow: none !important;
+            cursor: not-allowed;
+        }
+
+        /* Emoji Size Adjustments */
+        .emoji-lg {
+            font-size: 6rem;
+            line-height: 1;
+        }
+        .emoji-md {
+            font-size: 4rem;
+            line-height: 1;
+        }
+        
+        #confetti-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        #bg-effects-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1; /* Berada di paling belakang, tapi di atas gambar background body */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <!-- Efek Latar Belakang (Salju & Burung) -->
+    <canvas id="bg-effects-canvas"></canvas>
+
+    <div class="relative bg-white/90 backdrop-blur-sm w-full max-w-md h-[90vh] max-h-[800px] rounded-3xl shadow-2xl overflow-hidden flex flex-col border-4 border-white">
+        
+        <!-- Tombol Fullscreen -->
+        <button onclick="toggleFullScreen()" class="absolute top-4 right-4 z-50 btn-game bg-white/80 hover:bg-white text-gray-800 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-all border-2 border-gray-200 shadow-sm" title="Layar Penuh">
+            <i id="fullscreen-icon" class="fa-solid fa-expand"></i>
+        </button>
+
+        <canvas id="confetti-canvas" class="hide-section"></canvas>
+
+        <!-- Intro Screen (Input Nama) -->
+        <div id="screen-intro" class="flex-1 flex flex-col items-center justify-center p-6 text-center animate-pop z-10 relative">
+            <div class="bg-blue-300 w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-lg animate-bounce-slight border-4 border-white overflow-hidden">
+                <!-- Ikon aplikasi diganti dengan icon.png -->
+                <img src="asset/icon.png" alt="Ikon Aplikasi" class="w-16 h-16 object-contain drop-shadow-md" onerror="this.src='https://placehold.co/100x100/png?text=Icon'">
+            </div>
+            <h1 class="text-3xl font-black text-blue-600 mb-2 drop-shadow-md">HALO TEMAN!</h1>
+            <p class="text-gray-700 font-bold mb-6 text-lg">Siapa namamu?</p>
+            
+            <input type="text" id="student-name-input" class="w-full text-center text-2xl font-black text-blue-700 bg-blue-50 border-4 border-blue-200 rounded-2xl py-4 px-4 mb-6 focus:outline-none focus:border-blue-500 shadow-inner transition-colors placeholder:text-blue-300" placeholder="Ketik nama di sini..." autocomplete="off" onkeypress="handleNameKeyPress(event)">
+            
+            <button onclick="submitName()" class="btn-game bg-green-500 hover:bg-green-400 text-white font-black py-4 px-8 rounded-2xl text-xl border-2 border-green-600 flex items-center justify-center gap-3 w-full">
+                <i class="fa-solid fa-play"></i> MULAI
+            </button>
+        </div>
+
+        <!-- Home Screen -->
+        <div id="screen-home" class="flex-1 flex flex-col items-center justify-center p-6 text-center hide-section z-10 relative">
+            <div class="bg-yellow-300 w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-lg animate-bounce-slight border-4 border-white overflow-hidden">
+                <!-- Ikon aplikasi diganti dengan icon.png -->
+                <img src="asset/icon.png" alt="Ikon Aplikasi" class="w-16 h-16 object-contain drop-shadow-md" onerror="this.src='https://placehold.co/100x100/png?text=Icon'">
+            </div>
+            <h2 id="welcome-message" class="text-2xl font-black text-orange-500 mb-1 drop-shadow-sm">Halo!</h2>
+            <h1 class="text-3xl font-black text-blue-600 mb-2 drop-shadow-md">MARI BELAJAR IPS</h1>
+            <h2 class="text-xl font-bold text-gray-700 mb-1">Mengenal Keluarga</h2>
+            <div class="bg-blue-100 rounded-xl p-3 mb-6 shadow-inner w-full">
+                <p class="text-sm font-bold text-blue-800">Kelas VI SDLB</p>
+                <div class="border-t-2 border-blue-200 my-2"></div>
+                <div class="flex items-center justify-center gap-4 mt-2">
+                    <img src="asset/saya.png" alt="Foto Pengembang" class="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm bg-blue-200" onerror="this.src='https://placehold.co/100x100/png?text=Foto'">
+                    <div class="text-left">
+                        <p class="text-xs text-gray-600 font-bold uppercase">Pengembang:</p>
+                        <p class="text-sm font-black text-gray-800">Sri Wahyuni, S.Pd., SD</p>
+                        <p class="text-xs font-bold text-gray-600">SKH Negeri 1 Kuala Kapuas</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 w-full">
+                <button onclick="startGameMode('materi')" class="btn-game bg-green-500 hover:bg-green-400 text-white font-black py-4 px-6 rounded-2xl text-xl border-2 border-green-600 flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-book-open"></i> BELAJAR DULU
+                </button>
+                <button onclick="startGameMode('match')" class="btn-game bg-orange-500 hover:bg-orange-400 text-white font-black py-4 px-6 rounded-2xl text-xl border-2 border-orange-600 flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-puzzle-piece"></i> MENCOCOKKAN
+                </button>
+                <button onclick="startGameMode('quiz')" class="btn-game bg-purple-500 hover:bg-purple-400 text-white font-black py-4 px-6 rounded-2xl text-xl border-2 border-purple-600 flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-gamepad"></i> KUIS KELUARGA
+                </button>
+                <button onclick="showDashboard()" class="btn-game bg-gray-600 hover:bg-gray-500 text-white font-black py-3 px-6 rounded-2xl text-lg border-2 border-gray-700 flex items-center justify-center gap-3 mt-2">
+                    <i class="fa-solid fa-chart-column"></i> REKAP NILAI GURU
+                </button>
+            </div>
+        </div>
+
+        <!-- Materi Screen -->
+        <div id="screen-materi" class="flex-1 flex flex-col hide-section">
+            <div class="bg-green-500 text-white p-4 flex items-center justify-between shadow-md">
+                <button onclick="goHome()" class="btn-game bg-green-600 w-10 h-10 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <h2 class="font-black text-xl">MATERI KELUARGA</h2>
+                <div class="w-10"></div> <!-- Spacer -->
+            </div>
+            
+            <div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <div id="materi-content" class="w-full bg-white rounded-3xl shadow-lg border-4 border-green-200 p-6 flex flex-col items-center animate-pop">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+            <div class="p-6 flex justify-between gap-4">
+                <button id="btn-prev-materi" onclick="navMateri(-1)" class="btn-game flex-1 bg-yellow-400 text-yellow-900 font-bold py-3 rounded-xl">SEBELUMNYA</button>
+                <button id="btn-next-materi" onclick="navMateri(1)" class="btn-game flex-1 bg-blue-500 text-white font-bold py-3 rounded-xl">SELANJUTNYA</button>
+            </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="screen-quiz" class="flex-1 flex flex-col hide-section">
+            <div class="bg-purple-500 text-white p-4 flex items-center justify-between shadow-md">
+                <button onclick="goHome()" class="btn-game bg-purple-600 w-10 h-10 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <h2 class="font-black text-xl">AYO BERMAIN!</h2>
+                <div class="font-black bg-purple-700 px-3 py-1 rounded-lg">
+                    <span id="quiz-progress">1/5</span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 flex flex-col">
+                <div class="bg-white rounded-2xl shadow-md border-4 border-purple-200 p-4 mb-6 text-center">
+                    <h3 id="quiz-question" class="text-xl font-bold text-gray-800">Pertanyaan...</h3>
+                </div>
+
+                <div id="quiz-options" class="grid grid-cols-2 gap-4 flex-1 content-center">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Matching Game Screen -->
+        <div id="screen-match" class="flex-1 flex flex-col hide-section bg-orange-50">
+            <div class="bg-orange-500 text-white p-4 flex items-center justify-between shadow-md z-10">
+                <button onclick="goHome()" class="btn-game bg-orange-600 w-10 h-10 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <h2 class="font-black text-xl">MENCOCOKKAN</h2>
+                <div class="font-black bg-orange-700 px-3 py-1 rounded-lg">
+                    <span id="match-progress">0/4</span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 flex flex-col justify-center relative">
+                <p class="text-center font-bold text-orange-800 mb-6 bg-white shadow p-3 rounded-2xl">Pilih gambar, lalu klik kata yang tepat!</p>
+                
+                <div class="flex justify-between gap-4 w-full h-full max-h-[500px]">
+                    <!-- Kolom Gambar -->
+                    <div id="match-col-left" class="flex flex-col justify-between gap-3 w-1/2">
+                        <!-- Injected by JS -->
+                    </div>
+                    
+                    <!-- Kolom Kata -->
+                    <div id="match-col-right" class="flex flex-col justify-between gap-3 w-1/2">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="screen-result" class="flex-1 flex flex-col items-center justify-center p-6 text-center hide-section z-10 relative">
+            <h2 class="text-4xl font-black text-blue-600 mb-2 drop-shadow-md">SELESAI!</h2>
+            
+            <div class="flex gap-2 mb-4 text-5xl text-yellow-400 drop-shadow-md" id="star-container">
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-xl border-4 border-yellow-300 p-6 w-full mb-6">
+                <p class="text-gray-500 font-bold uppercase mb-1">Skor Kamu</p>
+                <p id="final-score" class="text-6xl font-black text-blue-500 mb-2">100</p>
+                
+                <!-- Tambahan Predikat -->
+                <div class="bg-gray-50 rounded-2xl py-2 px-4 inline-block mb-3 border-2 border-gray-200 shadow-inner w-full">
+                    <span class="text-gray-500 font-bold text-xs uppercase block mb-1 tracking-widest">Predikat</span>
+                    <span id="final-predikat" class="text-2xl font-black text-purple-600">SANGAT BAIK</span>
+                </div>
+
+                <p id="final-message" class="text-lg font-bold text-green-500">Luar Biasa!</p>
+            </div>
+
+            <div class="flex flex-col gap-3 w-full">
+                <!-- Tombol Main Lagi akan menyesuaikan dengan mode terakhir yang dimainkan -->
+                <button onclick="startGameMode(currentMode)" class="btn-game bg-purple-500 text-white font-black py-4 px-6 rounded-2xl text-xl border-2 border-purple-600">
+                    <i class="fa-solid fa-rotate-right mr-2"></i> MAIN LAGI
+                </button>
+                <button onclick="goHome()" class="btn-game bg-blue-500 text-white font-black py-4 px-6 rounded-2xl text-xl border-2 border-blue-600">
+                    <i class="fa-solid fa-house mr-2"></i> MENU UTAMA
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom Feedback Modal overlay -->
+        <div id="feedback-overlay" class="absolute inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center hide-section">
+            <div id="feedback-card" class="bg-white p-8 rounded-3xl text-center transform scale-0 transition-transform duration-300">
+                <div id="feedback-icon" class="text-6xl mb-4">✅</div>
+                <h2 id="feedback-title" class="text-3xl font-black mb-2">BENAR!</h2>
+                <p id="feedback-text" class="text-gray-600 font-bold">Kamu Hebat!</p>
+            </div>
+        </div>
+
+        <!-- Dashboard / Rekap Nilai Screen -->
+        <div id="screen-dashboard" class="flex-1 flex flex-col hide-section bg-gray-50">
+            <div class="bg-gray-700 text-white p-4 flex items-center justify-between shadow-md z-20">
+                <button onclick="goHome()" class="btn-game bg-gray-600 w-10 h-10 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <h2 class="font-black text-xl">REKAP NILAI</h2>
+                <div class="w-10"></div> <!-- Spacer -->
+            </div>
+
+            <div class="flex-1 overflow-hidden p-4 flex flex-col">
+                <div class="bg-white rounded-xl shadow-inner border-2 border-gray-200 flex-1 flex flex-col mb-4 overflow-hidden">
+                    <div class="overflow-y-auto flex-1">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="bg-gray-200 text-gray-700 text-[10px] uppercase sticky top-0 z-10 shadow-sm tracking-wider">
+                                <tr>
+                                    <th class="p-3 border-b-2 border-gray-300 font-black">Nama</th>
+                                    <th class="p-3 border-b-2 border-gray-300 font-black text-center">Gim</th>
+                                    <th class="p-3 border-b-2 border-gray-300 font-black text-center">Skor</th>
+                                    <th class="p-3 border-b-2 border-gray-300 font-black text-center">Waktu</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-table-body">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <button onclick="askClearData()" class="btn-game bg-red-500 hover:bg-red-400 text-white font-black py-3 px-6 rounded-xl border-2 border-red-600 flex items-center justify-center gap-2 shrink-0">
+                    <i class="fa-solid fa-trash"></i> HAPUS DATA KELAS
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom Confirm Modal -->
+        <div id="confirm-overlay" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center hide-section rounded-3xl">
+            <div id="confirm-card" class="bg-white p-6 rounded-3xl text-center shadow-2xl border-4 border-red-200 transform scale-0 transition-transform duration-300 w-10/12 max-w-sm">
+                <div class="text-5xl mb-4 text-red-500"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <h2 class="text-2xl font-black mb-2 text-gray-800">Hapus Data?</h2>
+                <p class="text-gray-600 font-bold mb-6 text-sm">Semua rekap nilai siswa akan terhapus secara permanen.</p>
+                <div class="flex gap-3">
+                    <button onclick="closeConfirm()" class="btn-game flex-1 bg-gray-400 text-white font-bold py-3 rounded-xl border-b-4 border-gray-500">BATAL</button>
+                    <button onclick="executeClearData()" class="btn-game flex-1 bg-red-500 text-white font-bold py-3 rounded-xl border-b-4 border-red-600">YA, HAPUS</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Data Materi & Mencocokkan ---
+        const materiData = [
+            { id: 1, name: "AYAH", image: "asset/ayah.png", role: "Kepala Keluarga", desc: "Ayah bertugas mencari nafkah dan melindungi keluarga.", color: "bg-blue-100", borderColor: "border-blue-400" },
+            { id: 2, name: "IBU", image: "asset/ibu.png", role: "Ibu Rumah Tangga", desc: "Ibu merawat anak-anak dan mengurus rumah dengan penuh kasih sayang.", color: "bg-pink-100", borderColor: "border-pink-400" },
+            { id: 3, name: "ANAK", image: "asset/anak.png", role: "Buah Hati", desc: "Tugas anak adalah belajar dengan rajin dan membantu orang tua.", color: "bg-yellow-100", borderColor: "border-yellow-400" },
+            { id: 4, name: "KAKEK", image: "asset/kakek.png", role: "Orang Tua Ayah/Ibu", desc: "Kakek adalah ayah dari bapak atau ibu kita.", color: "bg-gray-100", borderColor: "border-gray-400" },
+            { id: 5, name: "NENEK", image: "asset/nenek.png", role: "Orang Tua Ayah/Ibu", desc: "Nenek adalah ibu dari bapak atau ibu kita.", color: "bg-purple-100", borderColor: "border-purple-400" }
+        ];
+
+        // --- Data Quiz ---
+        const quizData = [
+            {
+                question: "Siapa yang bertugas mencari uang (nafkah) untuk keluarga?",
+                options: [
+                    { image: "asset/ayah.png", label: "Ayah", isCorrect: true },
+                    { image: "asset/anak.png", label: "Anak", isCorrect: false }
+                ]
+            },
+            {
+                question: "Tugas utama anak di rumah adalah...",
+                options: [
+                    { image: "asset/belajar.png", label: "Belajar", isCorrect: true },
+                    { image: "asset/bekerja.png", label: "Bekerja", isCorrect: false }
+                ]
+            },
+            {
+                question: "Siapa yang melahirkan dan menyusui kita?",
+                options: [
+                    { image: "asset/kakek.png", label: "Kakek", isCorrect: false },
+                    { image: "asset/ibu.png", label: "Ibu", isCorrect: true }
+                ]
+            },
+            {
+                question: "Gambar Ayah ditunjukkan oleh...",
+                options: [
+                    { image: "asset/ayah.png", label: "Ayah", isCorrect: true },
+                    { image: "asset/nenek.png", label: "Nenek", isCorrect: false }
+                ]
+            },
+            {
+                question: "Ayah dari bapak atau ibu kita disebut...",
+                options: [
+                    { image: "asset/paman.png", label: "Paman", isCorrect: false },
+                    { image: "asset/kakek.png", label: "Kakek", isCorrect: true }
+                ]
+            }
+        ];
+
+        // Global State
+        let currentMode = ''; 
+        let currentMateriIndex = 0;
+        let currentQuizIndex = 0;
+        let score = 0;
+        let isAudioInit = false;
+        let playerName = "";
+
+        // Audio Suara Guru (Voice Over)
+        const suaraBenar = new Audio('asset/benar.mp3');
+        const suaraSalah = new Audio('asset/salah.mp3');
+
+        // Sound Synthesis Setup (Tone.js)
+        const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+        
+        function playSound(type) {
+            if (!isAudioInit) return;
+            const now = Tone.now();
+            if (type === 'correct') {
+                synth.triggerAttackRelease(["C5", "E5", "G5"], "8n", now);
+                
+                // Putar rekaman suara pujian
+                suaraBenar.currentTime = 0;
+                suaraBenar.play().catch(e => console.log("File benar.mp3 belum ada di folder asset"));
+            } else if (type === 'wrong') {
+                synth.triggerAttackRelease(["C3", "C2"], "8n", now);
+                
+                // Putar rekaman suara semangat
+                suaraSalah.currentTime = 0;
+                suaraSalah.play().catch(e => console.log("File salah.mp3 belum ada di folder asset"));
+            } else if (type === 'click') {
+                synth.triggerAttackRelease("C5", "32n", now);
+            } else if (type === 'win') {
+                synth.triggerAttackRelease(["C4", "E4", "G4", "C5", "E5"], "2n", now);
+            } else if (type === 'pop') {
+                synth.triggerAttackRelease("G5", "32n", now);
+            }
+        }
+
+        async function initAudio() {
+            if (!isAudioInit) {
+                await Tone.start();
+                isAudioInit = true;
+            }
+        }
+
+        function toggleFullScreen() {
+            initAudio(); // Memastikan audio aktif jika fullscreen diklik pertama kali
+            playSound('click');
+            const doc = window.document;
+            const docEl = doc.documentElement;
+            const icon = document.getElementById('fullscreen-icon');
+
+            const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+            const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+            if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+                if(requestFullScreen) {
+                    requestFullScreen.call(docEl).then(() => {
+                        icon.classList.remove('fa-expand');
+                        icon.classList.add('fa-compress');
+                    }).catch(err => console.log(err));
+                }
+            } else {
+                if(cancelFullScreen) {
+                    cancelFullScreen.call(doc).then(() => {
+                        icon.classList.remove('fa-compress');
+                        icon.classList.add('fa-expand');
+                    }).catch(err => console.log(err));
+                }
+            }
+        }
+
+        function handleNameKeyPress(e) {
+            if (e.key === 'Enter') submitName();
+        }
+
+        function submitName() {
+            initAudio();
+            const inputEl = document.getElementById('student-name-input');
+            const name = inputEl.value.trim();
+
+            if (name === "") {
+                // Efek getar jika nama kosong
+                inputEl.classList.add('animate-shake', 'border-red-500');
+                inputEl.classList.remove('border-blue-200');
+                playSound('wrong');
+                setTimeout(() => {
+                    inputEl.classList.remove('animate-shake', 'border-red-500');
+                    inputEl.classList.add('border-blue-200');
+                }, 500);
+                return;
+            }
+
+            playerName = name;
+            document.getElementById('welcome-message').innerText = `Halo, ${playerName}! 👋`;
+            playSound('correct');
+            showScreen('screen-home');
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('div[id^="screen-"]').forEach(el => {
+                el.classList.add('hide-section');
+                el.classList.remove('animate-pop');
+            });
+            const target = document.getElementById(screenId);
+            target.classList.remove('hide-section');
+            target.classList.add('animate-pop');
+            document.getElementById('confetti-canvas').classList.add('hide-section');
+        }
+
+        function goHome() {
+            playSound('click');
+            showScreen('screen-home');
+        }
+
+        function startGameMode(mode) {
+            initAudio(); // Initialize audio context on first user interaction
+            playSound('click');
+            currentMode = mode;
+            
+            if (mode === 'materi') {
+                currentMateriIndex = 0;
+                renderMateri();
+                showScreen('screen-materi');
+            } else if (mode === 'quiz') {
+                currentQuizIndex = 0;
+                score = 0;
+                // Shuffle options for each question
+                quizData.forEach(q => q.options.sort(() => Math.random() - 0.5));
+                renderQuiz();
+                showScreen('screen-quiz');
+            } else if (mode === 'match') {
+                renderMatch();
+                showScreen('screen-match');
+            }
+        }
+
+        function renderMateri() {
+            const data = materiData[currentMateriIndex];
+            const container = document.getElementById('materi-content');
+            
+            // Trigger reflow for animation
+            container.classList.remove('animate-pop');
+            void container.offsetWidth;
+            container.classList.add('animate-pop');
+
+            container.innerHTML = `
+                <div class="w-32 h-32 rounded-full ${data.color} border-4 ${data.borderColor} flex items-center justify-center mb-4 shadow-inner overflow-hidden">
+                    <img src="${data.image}" alt="${data.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/200x200/png?text=${data.name}'">
+                </div>
+                <h3 class="text-3xl font-black text-gray-800 mb-1">${data.name}</h3>
+                <span class="bg-green-100 text-green-800 font-bold px-3 py-1 rounded-full text-sm mb-4">${data.role}</span>
+                <p class="text-gray-600 font-bold text-lg">${data.desc}</p>
+            `;
+
+            document.getElementById('btn-prev-materi').disabled = (currentMateriIndex === 0);
+            document.getElementById('btn-prev-materi').style.opacity = (currentMateriIndex === 0) ? "0.5" : "1";
+            
+            const nextBtn = document.getElementById('btn-next-materi');
+            if (currentMateriIndex === materiData.length - 1) {
+                nextBtn.innerHTML = '<i class="fa-solid fa-check"></i> SELESAI';
+                nextBtn.className = "btn-game flex-1 bg-green-500 text-white font-bold py-3 rounded-xl";
+            } else {
+                nextBtn.innerHTML = 'SELANJUTNYA <i class="fa-solid fa-arrow-right"></i>';
+                nextBtn.className = "btn-game flex-1 bg-blue-500 text-white font-bold py-3 rounded-xl";
+            }
+        }
+
+        function navMateri(dir) {
+            playSound('click');
+            if (dir === 1 && currentMateriIndex === materiData.length - 1) {
+                goHome();
+                return;
+            }
+            currentMateriIndex += dir;
+            renderMateri();
+        }
+
+        function renderQuiz() {
+            const data = quizData[currentQuizIndex];
+            document.getElementById('quiz-progress').innerText = `${currentQuizIndex + 1}/${quizData.length}`;
+            document.getElementById('quiz-question').innerText = data.question;
+
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            
+            data.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "btn-game bg-white border-4 border-gray-200 rounded-3xl flex flex-col items-center justify-center p-6 gap-4 hover:border-purple-400 hover:bg-purple-50 transition-colors w-full h-full aspect-square";
+                btn.onclick = () => checkAnswer(opt.isCorrect, btn);
+                btn.innerHTML = `
+                    <img src="${opt.image}" alt="${opt.label}" class="w-20 h-20 object-contain" onerror="this.src='https://placehold.co/150x150/png?text=${opt.label}'">
+                    <span class="font-bold text-xl text-gray-700">${opt.label}</span>
+                `;
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(isCorrect, btnElement) {
+            const overlay = document.getElementById('feedback-overlay');
+            const card = document.getElementById('feedback-card');
+            const icon = document.getElementById('feedback-icon');
+            const title = document.getElementById('feedback-title');
+            const text = document.getElementById('feedback-text');
+
+            overlay.classList.remove('hide-section');
+            
+            if (isCorrect) {
+                playSound('correct');
+                score += 20; // 5 questions = 100 max score
+                icon.innerHTML = "🌟";
+                title.innerText = "BENAR!";
+                title.className = "text-4xl font-black mb-2 text-green-500";
+                text.innerText = "Jawabanmu Pintar!";
+                btnElement.classList.replace('border-gray-200', 'border-green-500');
+                btnElement.classList.add('bg-green-100');
+            } else {
+                playSound('wrong');
+                icon.innerHTML = "❌";
+                title.innerText = "KURANG TEPAT";
+                title.className = "text-3xl font-black mb-2 text-red-500";
+                text.innerText = "Ayo coba lagi nanti!";
+                btnElement.classList.replace('border-gray-200', 'border-red-500');
+                btnElement.classList.add('bg-red-100', 'animate-shake');
+            }
+
+            // Animate Modal In
+            setTimeout(() => {
+                card.classList.remove('scale-0');
+                card.classList.add('scale-100');
+            }, 10);
+
+            // Wait then proceed
+            setTimeout(() => {
+                card.classList.remove('scale-100');
+                card.classList.add('scale-0');
+                setTimeout(() => {
+                    overlay.classList.add('hide-section');
+                    currentQuizIndex++;
+                    if (currentQuizIndex < quizData.length) {
+                        renderQuiz();
+                    } else {
+                        showResult();
+                    }
+                }, 300);
+            }, 1500);
+        }
+
+        let matchSelected = { left: null, right: null };
+        let matchCount = 0;
+        let matchTotal = 4; // Kita ambil 4 item acak dari 5 materi yang ada
+
+        function renderMatch() {
+            matchSelected = { left: null, right: null };
+            matchCount = 0;
+            score = 100; // Mulai dengan skor penuh di game mencocokkan
+            
+            // Mengambil 4 item acak untuk dicocokkan
+            let itemsToMatch = [...materiData].sort(() => 0.5 - Math.random()).slice(0, matchTotal);
+            
+            // Acak urutan kiri (Gambar) dan kanan (Teks) secara terpisah
+            let leftItems = [...itemsToMatch].sort(() => 0.5 - Math.random());
+            let rightItems = [...itemsToMatch].sort(() => 0.5 - Math.random());
+            
+            const leftCol = document.getElementById('match-col-left');
+            const rightCol = document.getElementById('match-col-right');
+            
+            leftCol.innerHTML = '';
+            rightCol.innerHTML = '';
+            document.getElementById('match-progress').innerText = `0/${matchTotal}`;
+            
+            // Render Kolom Gambar
+            leftItems.forEach(item => {
+                let btn = document.createElement('button');
+                btn.className = "btn-game bg-white border-4 border-gray-200 rounded-2xl flex-1 flex items-center justify-center transition-all min-h-[80px] p-2 overflow-hidden";
+                btn.id = `match-l-${item.id}`;
+                btn.innerHTML = `<img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-contain pointer-events-none" onerror="this.src='https://placehold.co/100x100/png?text=${item.name}'">`;
+                btn.onclick = () => selectMatchItem('left', item.id, btn);
+                leftCol.appendChild(btn);
+            });
+            
+            // Render Kolom Kata
+            rightItems.forEach(item => {
+                let btn = document.createElement('button');
+                btn.className = "btn-game bg-white border-4 border-gray-200 rounded-2xl flex-1 flex items-center justify-center transition-all min-h-[80px]";
+                btn.id = `match-r-${item.id}`;
+                btn.innerHTML = `<span class="font-black text-xl text-gray-700">${item.name}</span>`;
+                btn.onclick = () => selectMatchItem('right', item.id, btn);
+                rightCol.appendChild(btn);
+            });
+        }
+
+        function selectMatchItem(side, id, btn) {
+            // Hindari memproses item yang sudah berhasil dicocokkan
+            if (btn.classList.contains('matched')) return;
+            
+            playSound('pop');
+
+            // Hapus seleksi sebelumnya pada sisi yang sama
+            if (matchSelected[side]) {
+                matchSelected[side].btn.classList.remove('border-blue-500', 'bg-blue-100', 'scale-[1.02]');
+                matchSelected[side].btn.classList.add('border-gray-200', 'bg-white');
+            }
+
+            // Set seleksi baru
+            matchSelected[side] = { id, btn };
+            btn.classList.remove('border-gray-200', 'bg-white');
+            btn.classList.add('border-blue-500', 'bg-blue-100', 'scale-[1.02]');
+
+            // Jika pengguna sudah memilih kotak kiri dan kanan, cek kecocokannya
+            if (matchSelected.left && matchSelected.right) {
+                // Beri sedikit jeda agar visualnya terlihat sebelum diproses
+                setTimeout(checkMatch, 300);
+            }
+        }
+
+        function checkMatch() {
+            const left = matchSelected.left;
+            const right = matchSelected.right;
+            
+            if (left.id === right.id) {
+                // BENAR (Cocok)
+                playSound('correct');
+                matchCount++;
+                document.getElementById('match-progress').innerText = `${matchCount}/${matchTotal}`;
+                
+                [left.btn, right.btn].forEach(b => {
+                    b.classList.remove('border-blue-500', 'bg-blue-100', 'scale-[1.02]');
+                    b.classList.add('border-green-500', 'bg-green-100', 'matched', 'opacity-60', 'relative');
+                    // Tambahkan Ikon Centang sebagai penanda sudah selesai
+                    b.innerHTML += '<div class="absolute -top-3 -right-3 text-2xl text-green-600 bg-white rounded-full leading-none shadow-md"><i class="fa-solid fa-circle-check"></i></div>';
+                    b.disabled = true;
+                    
+                    // Efek Pop
+                    b.style.animation = 'none';
+                    b.offsetHeight; 
+                    b.style.animation = 'pop 0.3s ease';
+                });
+                
+                if (matchCount === matchTotal) {
+                    setTimeout(showResult, 800);
+                }
+            } else {
+                // SALAH (Tidak Cocok)
+                playSound('wrong');
+                // Pengurangan skor untuk mode mencocokkan jika salah
+                score = Math.max(0, score - 15);
+                
+                [left.btn, right.btn].forEach(b => {
+                    b.classList.remove('border-blue-500', 'bg-blue-100', 'scale-[1.02]');
+                    b.classList.add('border-red-500', 'bg-red-100', 'animate-shake');
+                    
+                    setTimeout(() => {
+                        b.classList.remove('border-red-500', 'bg-red-100', 'animate-shake');
+                        b.classList.add('border-gray-200', 'bg-white');
+                    }, 500);
+                });
+            }
+            
+            // Reset Seleksi
+            matchSelected = { left: null, right: null };
+        }
+
+        function showResult() {
+            showScreen('screen-result');
+            document.getElementById('final-score').innerText = score;
+            
+            const msg = document.getElementById('final-message');
+            const stars = document.getElementById('star-container');
+            const predikat = document.getElementById('final-predikat'); // Element Predikat
+            
+            if (score >= 90) {
+                predikat.innerText = "SANGAT BAIK";
+                predikat.className = "text-2xl font-black text-green-500 drop-shadow-sm";
+                msg.innerText = "Sempurna! Kamu Hebat!";
+                msg.className = "text-lg font-bold text-green-500 mt-2";
+                stars.innerHTML = '<i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>';
+                playSound('win');
+                startConfetti();
+            } else if (score >= 60) {
+                predikat.innerText = "BAIK";
+                predikat.className = "text-2xl font-black text-blue-500 drop-shadow-sm";
+                msg.innerText = "Bagus! Terus Belajar ya!";
+                msg.className = "text-lg font-bold text-blue-500 mt-2";
+                stars.innerHTML = '<i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>';
+                playSound('correct');
+            } else {
+                predikat.innerText = "PERLU BIMBINGAN";
+                predikat.className = "text-xl font-black text-orange-500 drop-shadow-sm";
+                msg.innerText = "Jangan Menyerah, Coba Lagi!";
+                msg.className = "text-lg font-bold text-orange-500 mt-2";
+                stars.innerHTML = '<i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i>';
+                playSound('wrong');
+            }
+
+            saveData(playerName, currentMode, score, predikat.innerText);
+        }
+
+        function saveData(name, mode, score, predikat) {
+            if(!name) name = "Anonim";
+            let records = JSON.parse(localStorage.getItem('mpi_ips_results')) || [];
+            
+            // Format waktu (Tgl/Bln Jam:Mnt)
+            const now = new Date();
+            const dateStr = `${now.getDate()}/${now.getMonth()+1} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            // Ganti nama mode agar mudah dibaca
+            let modeName = mode === 'quiz' ? 'Kuis' : (mode === 'match' ? 'Mencocokkan' : mode);
+            
+            // Masukkan data ke array
+            records.push({ name, mode: modeName, score, predikat, date: dateStr });
+            
+            // Simpan maksimal 100 data terbaru (hapus yang terlama jika melebihi)
+            if(records.length > 100) records = records.slice(records.length - 100);
+            
+            localStorage.setItem('mpi_ips_results', JSON.stringify(records));
+        }
+
+        function showDashboard() {
+            initAudio();
+            playSound('click');
+            showScreen('screen-dashboard');
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const tbody = document.getElementById('dashboard-table-body');
+            let records = JSON.parse(localStorage.getItem('mpi_ips_results')) || [];
+
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500 font-bold">Belum ada data nilai.</td></tr>';
+                return;
+            }
+
+            // Membalik susunan (terbaru tampil di atas)
+            records.reverse();
+
+            tbody.innerHTML = records.map(r => `
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td class="p-2 font-black text-gray-800 break-words whitespace-pre-wrap">${r.name}</td>
+                    <td class="p-2 text-gray-600 font-bold text-[10px] text-center uppercase tracking-wide">${r.mode}</td>
+                    <td class="p-2 text-center">
+                        <div class="font-black text-sm ${r.score >= 90 ? 'text-green-500' : r.score >= 60 ? 'text-blue-500' : 'text-orange-500'}">${r.score}</div>
+                        <div class="text-[8px] uppercase font-bold text-gray-400">${r.predikat}</div>
+                    </td>
+                    <td class="p-2 text-[10px] text-gray-400 font-bold text-center leading-tight">${r.date}</td>
+                </tr>
+            `).join('');
+        }
+
+        function askClearData() {
+            playSound('click');
+            const overlay = document.getElementById('confirm-overlay');
+            const card = document.getElementById('confirm-card');
+            overlay.classList.remove('hide-section');
+            setTimeout(() => {
+                card.classList.remove('scale-0');
+                card.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeConfirm() {
+            playSound('click');
+            const overlay = document.getElementById('confirm-overlay');
+            const card = document.getElementById('confirm-card');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-0');
+            setTimeout(() => {
+                overlay.classList.add('hide-section');
+            }, 300);
+        }
+
+        function executeClearData() {
+            playSound('pop');
+            localStorage.removeItem('mpi_ips_results');
+            renderDashboard();
+            closeConfirm();
+        }
+
+        // Simple HTML5 Canvas Confetti
+        function startConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            canvas.classList.remove('hide-section');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            let particles = [];
+            const colors = ['#fde047', '#3b82f6', '#ef4444', '#22c55e', '#a855f7', '#fb923c'];
+
+            for(let i=0; i<100; i++){
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    w: Math.random() * 10 + 5,
+                    h: Math.random() * 10 + 5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    speed: Math.random() * 3 + 2,
+                    angle: Math.random() * 360,
+                    spin: Math.random() * 0.2 - 0.1
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for(let i=0; i<particles.length; i++){
+                    let p = particles[i];
+                    ctx.save();
+                    ctx.translate(p.x + p.w/2, p.y + p.h/2);
+                    ctx.rotate(p.angle);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+                    ctx.restore();
+
+                    p.y += p.speed;
+                    p.angle += p.spin;
+                    
+                    if(p.y > canvas.height) {
+                        p.y = -10;
+                        p.x = Math.random() * canvas.width;
+                    }
+                }
+                if (!canvas.classList.contains('hide-section')) {
+                    requestAnimationFrame(draw);
+                }
+            }
+            draw();
+        }
+
+        // --- Background Effects (Snow & Birds) ---
+        function initBgEffects() {
+            const canvas = document.getElementById('bg-effects-canvas');
+            const ctx = canvas.getContext('2d');
+            let width = window.innerWidth;
+            let height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            // Menyesuaikan ukuran canvas saat layar diubah ukurannya
+            window.addEventListener('resize', () => {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            });
+
+            // Setup Data Partikel Salju
+            const snowflakes = [];
+            const snowCount = 60; // Jumlah salju
+            for (let i = 0; i < snowCount; i++) {
+                snowflakes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    r: Math.random() * 3 + 1, // radius (ukuran salju)
+                    vx: Math.random() * 1 - 0.5, // kecepatan horizontal (angin)
+                    vy: Math.random() * 1.5 + 0.5 // kecepatan jatuh
+                });
+            }
+
+            // Setup Data Burung
+            const birds = [];
+            const birdCount = 7; // Jumlah burung
+            for (let i = 0; i < birdCount; i++) {
+                birds.push({
+                    x: Math.random() * width, // Mulai tersebar
+                    y: Math.random() * height * 0.4, // Burung hanya terbang di area setengah atas layar
+                    size: Math.random() * 8 + 6, // Ukuran rentang sayap
+                    vx: Math.random() * 1.2 + 0.6, // Kecepatan terbang ke kanan
+                    flapSpeed: Math.random() * 0.1 + 0.05, // Kecepatan mengepak sayap
+                    flap: Math.random() * Math.PI * 2 // Titik awal kepakan sayap
+                });
+            }
+
+            // Loop Animasi Utama
+            function animateBg() {
+                ctx.clearRect(0, 0, width, height);
+
+                // Menggambar Burung (bentuk siluet 'V' melengkung)
+                ctx.strokeStyle = 'rgba(20, 20, 20, 0.4)'; // Warna burung abu-abu gelap agak transparan
+                ctx.lineWidth = 1.5;
+                
+                birds.forEach(bird => {
+                    ctx.beginPath();
+                    bird.flap += bird.flapSpeed;
+                    const wingY = Math.sin(bird.flap) * bird.size; // Menghitung lengkungan kepakan sayap
+
+                    // Menggambar bentuk sayap burung menggunakan kurva kuadrat
+                    ctx.moveTo(bird.x - bird.size, bird.y - wingY); // Ujung sayap kiri
+                    ctx.quadraticCurveTo(bird.x - bird.size/2, bird.y, bird.x, bird.y); // Pangkal badan (kiri)
+                    ctx.quadraticCurveTo(bird.x + bird.size/2, bird.y, bird.x + bird.size, bird.y - wingY); // Pangkal (kanan) ke Ujung sayap kanan
+                    ctx.stroke();
+
+                    // Update pergerakan burung
+                    bird.x += bird.vx;
+                    bird.y += Math.sin(bird.flap * 0.5) * 0.3; // Tambahan efek naik-turun halus pada bodi burung
+                    
+                    // Jika burung keluar dari tepi kanan layar, kembalikan ke sisi kiri
+                    if (bird.x > width + bird.size) {
+                        bird.x = -bird.size * 2;
+                        bird.y = Math.random() * height * 0.4;
+                        bird.flapSpeed = Math.random() * 0.1 + 0.05; // Ganti ritme kepakan agar variatif
+                    }
+                });
+
+                // Menggambar Salju
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; // Warna salju putih
+                ctx.beginPath();
+                
+                snowflakes.forEach(snow => {
+                    ctx.moveTo(snow.x, snow.y);
+                    ctx.arc(snow.x, snow.y, snow.r, 0, Math.PI * 2);
+                });
+                ctx.fill();
+
+                // Update pergerakan Salju
+                snowflakes.forEach(snow => {
+                    snow.y += snow.vy;
+                    snow.x += snow.vx;
+                    
+                    // Jika salju jatuh melewati batas bawah, kembalikan ke atas
+                    if (snow.y > height) snow.y = -5;
+                    // Efek wrap-around jika tertiup angin keluar layar ke samping
+                    if (snow.x > width) snow.x = 0;
+                    if (snow.x < 0) snow.x = width;
+                });
+
+                requestAnimationFrame(animateBg);
+            }
+            
+            // Mulai animasi
+            animateBg();
+        }
+
+        // Menjalankan fungsi setup efek saat dokumen HTML selesai dimuat
+        document.addEventListener('DOMContentLoaded', initBgEffects);
+    </script>
+</body>
+</html>
